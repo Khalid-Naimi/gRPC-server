@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package si;
+option java_package = "si";
+option java_multiple_files = true;
+
+service Stock {
+  rpc GetStock (StockRequest) returns (StockResponse);
+}
+
+message StockRequest {
+  string item_id = 1;
+}
+
+message StockResponse {
+  int32 quantity = 1;
+}
