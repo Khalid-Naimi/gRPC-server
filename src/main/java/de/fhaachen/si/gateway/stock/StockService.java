@@ -1,4 +1,4 @@
-package de.fhaachen.si.gateway;
+package de.fhaachen.si.gateway.stock;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -17,11 +17,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
+import de.fhaachen.si.gateway.config.Config;
+
 public class StockService extends StockGrpc.StockImplBase {
 
-    private final StockConfig config;
+    private final Config config;
 
-    public StockService(StockConfig config) {
+    public StockService(Config config) {
         this.config = config;
     }
 
@@ -36,7 +38,7 @@ public class StockService extends StockGrpc.StockImplBase {
 
         int quantity = -1;
         try {
-            String url = config.endpoint();
+            String url = config.endpoint()+"/products";
             System.out.println("[gRPC] Sending HTTP request to ERP endpoint: " + url);
             String basic = "Basic " + Base64.getEncoder()
                     .encodeToString((config.username() + ":" + config.password()).getBytes(StandardCharsets.UTF_8));
