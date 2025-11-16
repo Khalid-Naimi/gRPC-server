@@ -70,7 +70,8 @@ public class ProductService extends ProductGrpc.ProductImplBase{
 	            for (JsonElement el : arr) {
 	                var obj = el.getAsJsonObject();
 	                list.add(ProductResponse.newBuilder()
-	                        .setId(obj.has("productID") ? obj.get("productID").getAsString() : "")
+	                        .setId(obj.has("ID") ? obj.get("ID").getAsString() : "")
+	                        .setProductCode(obj.has("productID") ? obj.get("productID").getAsString() : "")
 	                        .setName(obj.has("name") ? obj.get("name").getAsString() : "")
 	                        .setDescription(obj.has("description") && !obj.get("description").isJsonNull()
 	                                ? obj.get("description").getAsString()
@@ -124,7 +125,8 @@ public class ProductService extends ProductGrpc.ProductImplBase{
 	            }
 
 	            ProductResponse product = ProductResponse.newBuilder()
-	                    .setId(obj.has("productID") ? obj.get("productID").getAsString() : "")
+                        .setId(obj.has("ID") ? obj.get("ID").getAsString() : "")
+                        .setProductCode(obj.has("productID") ? obj.get("productID").getAsString() : "")
 	                    .setName(obj.has("name") ? obj.get("name").getAsString() : "")
 	                    .setDescription(obj.has("description") && !obj.get("description").isJsonNull()
 	                            ? obj.get("description").getAsString()

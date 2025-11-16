@@ -34,62 +34,64 @@ public class OrderService extends OrderGrpc.OrderImplBase {
     /**
      * Creates a new Order in the ERP system via its REST API.
      */
-    @Override
-    public void createOrder(OrderRequest req, StreamObserver<OrderResponse> res) {
-        try {
-            String basicAuth = "Basic " + Base64.getEncoder()
-                    .encodeToString((config.username() + ":" + config.password()).getBytes(StandardCharsets.UTF_8));
+	@Override
+	public void createOrder(OrderRequest req, StreamObserver<OrderResponse> res) {
+	    try {
+	        String basicAuth = "Basic " + Base64.getEncoder()
+	                .encodeToString((config.username() + ":" + config.password()).getBytes(StandardCharsets.UTF_8));
 
-            // Prepare payload structure matching ERP's expectations
-            JsonObject payload = new JsonObject();
-            payload.addProperty("customer_ID", req.getCustomerId());
-            payload.addProperty("orderDate", req.getOrderDate());
-            payload.addProperty("orderAmount", req.getOrderAmount());
-            payload.addProperty("currency_code", req.getCurrency());
+	        JsonObject orderObject = new JsonObject();
+	        orderObject.addProperty("customer", req.getCustomerId());
+	        orderObject.addProperty("orderDate", req.getOrderDate());
+	        orderObject.addProperty("orderAmount", req.getOrderAmount());
+	        orderObject.addProperty("currency", req.getCurrency());
 
-            JsonArray itemsArray = new JsonArray();
-            for (OrderItem item : req.getItemsList()) {
-                JsonObject itemObj = new JsonObject();
-                itemObj.addProperty("product_ID", item.getProductId());
-                itemObj.addProperty("quantity", item.getQuantity());
-                itemObj.addProperty("itemAmount", item.getItemAmount());
-                itemObj.addProperty("currency_code", item.getCurrency());
-                itemsArray.add(itemObj);
-            }
-            payload.add("items", itemsArray);
+	        JsonArray itemsArray = new JsonArray();
+	        for (OrderItem item : req.getItemsList()) {
+	            JsonObject itemObj = new JsonObject();
+	            itemObj.addProperty("itemID", 10); // ERP expects itemID (can be auto-calculated or dummy)
+	            itemObj.addProperty("product", item.getProductUuid());
+	            itemObj.addProperty("quantity", item.getQuantity());
+	            itemObj.addProperty("itemAmount", item.getItemAmount());
+	            itemObj.addProperty("currency", item.getCurrency());
+	            itemsArray.add(itemObj);
+	        }
 
-            // Send HTTP POST to ERP (likely to /orders or /Orders)
-            HttpRequest httpReq = HttpRequest.newBuilder()
-                    .uri(URI.create(config.endpoint() + "/orders"))
-                    .header("Authorization", basicAuth)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
-                    .build();
+	        orderObject.add("items", itemsArray);
 
-            HttpResponse<String> httpResp = HttpClient.newHttpClient()
-                    .send(httpReq, HttpResponse.BodyHandlers.ofString());
+	        JsonObject rootPayload = new JsonObject();
+	        rootPayload.add("order", orderObject);
 
-            if (httpResp.statusCode() == 200 || httpResp.statusCode() == 201) {
-                JsonObject jsonResp = JsonParser.parseString(httpResp.body()).getAsJsonObject();
-                String orderId = jsonResp.has("orderID") ? jsonResp.get("orderID").getAsString() : "unknown";
-                res.onNext(OrderResponse.newBuilder()
-                        .setOrderId(orderId)
-                        .setStatus("CREATED")
-                        .setMessage("Order created successfully")
-                        .build());
-            } else {
-                res.onNext(OrderResponse.newBuilder()
-                        .setMessage("ERP returned HTTP " + httpResp.statusCode())
-                        .setStatus("FAILED")
-                        .build());
-            }
-            res.onCompleted();
+	        HttpRequest httpReq = HttpRequest.newBuilder()
+	                .uri(URI.create(config.endpoint() + "/createOrder"))
+	                .header("Authorization", basicAuth)
+	                .header("Content-Type", "application/json")
+	                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(rootPayload)))
+	                .build();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            res.onError(Status.INTERNAL.withDescription("Failed to create order: " + e.getMessage()).asRuntimeException());
-        }
-    }
+	        HttpResponse<String> httpResp = HttpClient.newHttpClient()
+	                .send(httpReq, HttpResponse.BodyHandlers.ofString());
+
+	        if (httpResp.statusCode() == 200 || httpResp.statusCode() == 201) {
+	            res.onNext(OrderResponse.newBuilder()
+	                    .setOrderId("unknown")
+	                    .setStatus("CREATED")
+	                    .setMessage("Order created successfully in ERP")
+	                    .build());
+	        } else {
+	            res.onNext(OrderResponse.newBuilder()
+	                    .setStatus("FAILED")
+	                    .setMessage("ERP returned HTTP " + httpResp.statusCode() + ": " + httpResp.body())
+	                    .build());
+	        }
+	        res.onCompleted();
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        res.onError(Status.INTERNAL.withDescription("Failed to create order: " + e.getMessage()).asRuntimeException());
+	    }
+	}
+
 
     /**
      * Fetches a single order by ID from the ERP.
