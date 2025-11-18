@@ -15,14 +15,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import de.fhaachen.si.gateway.config.Config;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import si.ProductIdRequest;
-import si.ProductList;
-import si.ProductResponse;
-import si.Empty;
-import si.ProductGrpc;
+import de.fhaachen.si.gateway.config.Config;
+import de.fhaachen.si.grpc.Empty;
+import de.fhaachen.si.grpc.ProductGrpc;
+import de.fhaachen.si.grpc.ProductIdRequest;
+import de.fhaachen.si.grpc.ProductList;
+import de.fhaachen.si.grpc.ProductResponse;
 
 public class ProductService extends ProductGrpc.ProductImplBase{
 	  private final Config config;

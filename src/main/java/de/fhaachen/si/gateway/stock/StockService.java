@@ -2,9 +2,9 @@ package de.fhaachen.si.gateway.stock;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import si.StockGrpc;
-import si.StockRequest;
-import si.StockResponse;
+import de.fhaachen.si.grpc.StockGrpc;
+import de.fhaachen.si.grpc.StockRequest;
+import de.fhaachen.si.grpc.StockResponse;
 
 import java.net.URI;
 import java.net.http.HttpClient;

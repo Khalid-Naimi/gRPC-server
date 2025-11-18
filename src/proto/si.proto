@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package si;
-option java_package = "si";
+option java_package = "de.fhaachen.si.grpc";
 option java_multiple_files = true;
 
 service Stock {
@@ -16,14 +16,12 @@ message StockResponse {
   int32 quantity = 1;
 }
 
-// Order service definition
 service Order {
   rpc CreateOrder (OrderRequest) returns (OrderResponse);
   rpc GetOrderById (OrderIdRequest) returns (OrderResponse);
   rpc ChangeOrderStatus (OrderStatusRequest) returns (OrderResponse);
+  rpc GetAllOrders (Empty) returns (OrderListResponse);
 }
-
-// ---- Messages ----
 
 message OrderRequest {
   string customerId = 1;
@@ -42,11 +40,14 @@ message OrderItem {
 }
 
 message OrderResponse {
-  string orderId = 1;
-  string status = 2;
-  double totalAmount = 3;
-  string currency = 4;
-  string message = 6;
+  string order_id = 1;
+  string customerId = 2;
+  string orderDate = 3;
+  double total_amount = 4;
+  string currency = 5;
+  string status = 6;
+  repeated OrderItem items = 7;
+  string message = 8;
 }
 
 message OrderIdRequest {
@@ -56,6 +57,10 @@ message OrderIdRequest {
 message OrderStatusRequest {
   string order_id = 1;
   string new_status = 2;
+}
+
+message OrderListResponse {
+  repeated OrderResponse orders = 1;
 }
 
 service Product {

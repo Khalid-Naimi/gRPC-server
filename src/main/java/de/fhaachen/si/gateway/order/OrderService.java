@@ -2,15 +2,18 @@ package de.fhaachen.si.gateway.order;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import si.OrderGrpc;
-import si.OrderIdRequest;
-import si.OrderItem;
-import si.OrderRequest;
-import si.OrderResponse;
-import si.OrderStatusRequest;
+import de.fhaachen.si.grpc.Empty;
+import de.fhaachen.si.grpc.OrderGrpc;
+import de.fhaachen.si.grpc.OrderIdRequest;
+import de.fhaachen.si.grpc.OrderItem;
+import de.fhaachen.si.grpc.OrderListResponse;
+import de.fhaachen.si.grpc.OrderRequest;
+import de.fhaachen.si.grpc.OrderResponse;
+import de.fhaachen.si.grpc.OrderStatusRequest;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -178,8 +181,73 @@ public class OrderService extends OrderGrpc.OrderImplBase {
             res.onError(Status.INTERNAL.withDescription("Failed to update order status: " + e.getMessage()).asRuntimeException());
         }
     }
+    
+    @Override
+    public void getAllOrders(Empty req, StreamObserver<OrderListResponse> res) {
+        try {
+            String basicAuth = "Basic " + Base64.getEncoder()
+                    .encodeToString((config.username() + ":" + config.password()).getBytes(StandardCharsets.UTF_8));
 
-    // Helper to map our status to ERP actions
+            String url = config.endpoint() + "/orders";
+
+            HttpRequest httpReq = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", basicAuth)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> httpResp = HttpClient.newHttpClient()
+                    .send(httpReq, HttpResponse.BodyHandlers.ofString());
+            
+
+            JsonElement parsed = JsonParser.parseString(httpResp.body());
+            JsonArray arr;
+
+            if (parsed.isJsonArray()) {
+                arr = parsed.getAsJsonArray();
+            } else if (parsed.isJsonObject() && parsed.getAsJsonObject().has("value")) {
+                arr = parsed.getAsJsonObject().getAsJsonArray("value");
+            } else {
+                arr = new JsonArray();
+            }
+
+            OrderListResponse.Builder list = OrderListResponse.newBuilder();
+
+            for (var el : arr) {
+                JsonObject o = el.getAsJsonObject();
+
+                OrderResponse.Builder ob = OrderResponse.newBuilder()
+                        .setOrderId(o.get("orderID").getAsString())
+                        .setCustomerId(o.get("customer").getAsString())
+                        .setOrderDate(o.get("orderDate").getAsString())
+                        .setTotalAmount(o.get("orderAmount").getAsDouble())
+                        .setCurrency(o.get("currency").getAsString())
+                        .setStatus(o.get("orderStatus").getAsString());
+
+                JsonArray items = o.getAsJsonArray("items");
+                for (var it : items) {
+                    JsonObject item = it.getAsJsonObject();
+                    
+                    ob.addItems(OrderItem.newBuilder()
+                            .setItemId(item.get("itemID").getAsInt())
+                            .setProductUuid(item.get("product").getAsString())
+                            .setQuantity(item.get("quantity").getAsInt())
+                            .setItemAmount(item.get("itemAmount").getAsDouble())
+                            .setCurrency(item.get("currency").getAsString()));
+                }
+
+                list.addOrders(ob.build());
+            }
+
+            res.onNext(list.build());
+            res.onCompleted();
+
+        } catch (Exception e) {
+            res.onError(Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+        }
+    }
+
+
     private String mapStatusToAction(String status) {
         return switch (status.toUpperCase()) {
             case "PICKED" -> "pickOrder";
